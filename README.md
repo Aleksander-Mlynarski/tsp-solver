@@ -1,105 +1,139 @@
-# 🚚 Problem komiwojażera (TSP)
+# Travelling Salesman Problem (TSP) Solver
 
-Projekt został zrealizowany w ramach laboratorium z przedmiotu **Zaawansowane Programowanie Obiektowe**.
+A C++ implementation of the **Travelling Salesman Problem**, developed as part of an **Advanced Object-Oriented Programming** laboratory course.
 
-Celem było zaimplementowanie rozwiązania klasycznego problemu optymalizacyjnego – **problemu komiwojażera (Travelling Salesman Problem, TSP)**.
-
----
-
-## 📌 Opis problemu
-
-Problem komiwojażera polega na znalezieniu **najkrótszej możliwej trasy**, która:
-
-* odwiedza każde miasto dokładnie jeden raz
-* rozpoczyna się i kończy w tym samym punkcie
-
-Problem ten można modelować jako graf, gdzie:
-
-* wierzchołki = miasta
-* krawędzie = odległości między miastami
-
-Celem jest znalezienie **najkrótszego cyklu Hamiltona** ([algorytm.org][1])
+The program takes a cost matrix as input and returns the **shortest Hamiltonian cycle** — a route that visits every city exactly once and returns to the starting city.
 
 ---
 
-## 🎯 Cel projektu
+## Problem Description
 
-Celem projektu było:
+Given a complete graph where:
 
-* zapoznanie się z problemem TSP
-* implementacja wybranego algorytmu rozwiązującego problem
-* wykorzystanie programowania obiektowego
-* praca na gotowym szablonie i jego rozbudowa
+- **vertices** represent cities
+- **edge weights** represent travel costs between cities
 
----
+the goal is to find a cycle of minimum total cost that visits every vertex exactly once.
 
-## ⚙️ Wykorzystane podejście
-
-W projekcie zaimplementowano algorytm rozwiązujący problem komiwojażera.
-
-W zależności od wersji projektu mogą to być m.in.:
-
-* algorytm brute-force (siłowy)
-* heurystyki (np. najbliższego sąsiada)
-* algorytmy optymalizacyjne
-
-Ze względu na dużą złożoność problemu (rzędu **O(n!)**) rozwiązania dokładne działają efektywnie tylko dla małych danych ([ufkapano.github.io][2])
+This is an NP-hard problem. Exact methods become impractical for large instances because the search space grows factorially with the number of cities.
 
 ---
 
+## Approach
 
-## ▶️ Uruchomienie
+The solver uses a **Branch and Bound** algorithm with **cost matrix reduction**:
 
-1. Sklonuj repozytorium:
+1. **Reduce** the cost matrix by subtracting row and column minima (Hungarian-style reduction).
+2. **Select** the next edge to include — among zero-cost entries, pick the one with the highest penalty for not choosing it.
+3. **Branch** into two subproblems:
+   - **Left branch** — include the chosen edge in the path.
+   - **Right branch** — forbid the chosen edge.
+4. **Prune** branches whose lower bound exceeds the best solution found so far.
+5. **Explore** the search tree using a **LIFO stack** until a 2×2 matrix remains, then reconstruct the full path.
 
-```bash
-git clone https://github.com/Aleksander-Mlynarski/Problem_komiwojazera.git
+When multiple optimal routes exist, all of them are returned.
+
+---
+
+## Project Structure
+
+```
+tsp-solver/
+├── main.cpp              # Entry point and sample cost matrices
+├── CMakeLists.txt        # Build configuration
+├── include/
+│   ├── TSP.hxx           # Core types, CostMatrix, StageState, solve_tsp()
+│   └── tsp_setup.hxx     # Cost types, INF constant, IStageState interface
+└── src/
+    ├── TSP.cpp           # Branch-and-bound implementation
+    └── tsp_setup.cpp     # Utility functions
 ```
 
-2. Przejdź do katalogu projektu:
+### Key Components
+
+| Component | Role |
+|-----------|------|
+| `CostMatrix` | Stores the cost matrix; supports row/column reduction and vertex penalty calculation |
+| `StageState` | Represents a partial solution at a given stage of the search tree |
+| `solve_tsp()` | Runs the Branch and Bound search and returns optimal solutions |
+| `filter_solutions()` | Keeps only solutions with the minimum total cost |
+
+---
+
+## Requirements
+
+- **C++17** compiler (GCC, Clang, or MSVC)
+- **CMake** 3.13 or newer
+
+---
+
+## Build and Run
 
 ```bash
-cd Problem_komiwojazera
+git clone https://github.com/Aleksander-Mlynarski/tsp-solver.git
+cd tsp-solver
+cmake -B build
+cmake --build build
 ```
 
-3. Uruchom program:
+On Windows (Visual Studio generator):
 
 ```bash
-python main.py
+cmake -B build
+cmake --build build --config Debug
+./build/Debug/tsp.exe
 ```
 
----
-
-## 🧪 Testowanie
-
-Program można testować poprzez:
-
-* zmianę danych wejściowych (np. liczby miast)
-* analizę wygenerowanej trasy
-* porównanie długości ścieżek
+On Linux and macOS, the executable is typically located at `./build/tsp`.
 
 ---
 
-## 📚 Technologie
+## Usage
 
-* Python
-* Programowanie obiektowe (OOP)
+Edit the cost matrix in `main.cpp`. Use `INF` for forbidden transitions (the diagonal is always `INF` since a city cannot connect to itself):
+
+```cpp
+cost_matrix_t cm {
+    {INF, 12,   3,  45,   6},
+    { 78, INF, 90,  21,   3},
+    {  5,  56, INF,  23,  98},
+    { 12,   6,   8, INF,  34},
+    {  3,  98,   3,   2, INF}
+};
+```
+
+Run the program:
+
+```bash
+./build/tsp
+```
+
+Example output:
+
+```
+30 : 4 3 2 0 1
+```
+
+Each line shows the **total tour cost** followed by the **vertex indices** in visit order (0-based).
+
+Additional test matrices are included as comments in `main.cpp`. Uncomment a different matrix to try other instances.
 
 ---
 
-## 📝 Uwagi
+## Testing
 
-* Projekt został wykonany na podstawie materiałów laboratoryjnych
-* Implementacja skupia się na poprawności działania algorytmu
-* Dla większych danych czas działania może znacząco wzrosnąć
+The repository includes commented-out support for Google Test unit tests in `main.cpp`. To enable them, swap the active `main()` function as described in the file comments.
 
 ---
 
-## 👨‍💻 Autor
+## Technologies
 
-Projekt wykonany przez:
+- C++17
+- CMake
+- Object-oriented design (`CostMatrix`, `StageState`, `IStageState`)
+
+---
+
+## Author
 
 **Aleksander Młynarski**
-
-[1]: https://www.algorytm.org/algorytmy-grafowe/problem-komiwojazera.html?utm_source=chatgpt.com "Problem komiwojażera - Algorytmy i Struktury Danych"
-[2]: https://ufkapano.github.io/download/Piotr_Szestalo_2015.pdf?utm_source=chatgpt.com "Uniwersytet Jagielloński w Krakowie"
